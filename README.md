@@ -25,20 +25,16 @@
     const { chromium } = require('playwright');
     
     (async () => {
-      // Launch the browser
       const browser = await chromium.launch({ headless: false });
       const context = await browser.newContext();
       const page = await context.newPage();
     
-      // Navigate to the webpage
       await page.goto('https://www.demoblaze.com/index.html');
     
-      // Verify categories
       const categories = await page.$$('div.list-group a.list-group-item');
       const categoryNames = await Promise.all(categories.map(category => category.innerText()));
       console.log('Categories:', categoryNames);
     
-      // Check for expected categories
       const expectedCategories = ['CATEGORIES', 'Phones', 'Laptops', 'Monitors'];
       let allCategoriesFound = true;
     
@@ -53,16 +49,13 @@
         console.log('All expected categories were found successfully.');
       }
     
-      // Click on each category and verify product cards
       for (let i = 1; i < categories.length; i++) {
         const category = categories[i];
         const categoryName = await category.innerText();
         await category.click();
     
-        // Wait for products to load
         await page.waitForSelector('div#tbodyid div.col-lg-4');
     
-        // Get all product cards
         const productCards = await page.$$('div#tbodyid div.col-lg-4');
         console.log(`${categoryName} Products:`, productCards.length);
     
@@ -72,7 +65,6 @@
           console.error(`No product cards found for category "${categoryName}".`);
         }
     
-        // Verify each product card
         for (const productCard of productCards) {
           const productName = await productCard.$eval('h4', el => el.innerText);
           const productDescription = await productCard.$eval('p', el => el.innerText);
@@ -82,7 +74,6 @@
           console.log(`Description: ${productDescription}`);
           console.log(`Price: ${productPrice}`);
     
-          // Add your assertions here (e.g., check for non-empty values, specific formats, etc.)
           if (!productName || !productDescription || !productPrice) {
             console.error('Product card validation failed');
           } else {
@@ -91,7 +82,6 @@
         }
       }
     
-      // Close the browser
       await browser.close();
     })();
 
