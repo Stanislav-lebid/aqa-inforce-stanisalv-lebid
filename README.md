@@ -8,54 +8,97 @@
 
 Встановіть Playwright за допомогою npm:
 
-npm install @playwright/test
+    npm install @playwright/test
 
 ##Налаштування Playwright
 Після встановлення Playwright, виконайте команду для автоматичної установки необхідних браузерів:
 
-npx playwright install
+    npx playwright install
 Ця команда встановить браузери Chromium, Firefox і WebKit, а також створить базовий конфігураційний файл для тестування.
 
 ##Створення тестового файлу
 Створіть файл для ваших тестів, наприклад login.test.js, у кореневій директорії вашого проекту.
 
 ##Написання тестів
-Відкрийте створений файл у текстовому редакторі та напишіть ваші тести. Ось приклад тестів для функціональності логіну та реєстрації:
+Відкрийте створений файл у текстовому редакторі та напишіть ваші тести. Наприклад:
 
-const { test, expect } = require('@playwright/test');
+    const { chromium } = require('playwright');
+    
+    (async () => {
+      // Launch the browser
+      const browser = await chromium.launch({ headless: false });
+      const context = await browser.newContext();
+      const page = await context.newPage();
+    
+      // Navigate to the webpage
+      await page.goto('https://www.demoblaze.com/index.html');
+    
+      // Verify categories
+      const categories = await page.$$('div.list-group a.list-group-item');
+      const categoryNames = await Promise.all(categories.map(category => category.innerText()));
+      console.log('Categories:', categoryNames);
+    
+      // Check for expected categories
+      const expectedCategories = ['CATEGORIES', 'Phones', 'Laptops', 'Monitors'];
+      let allCategoriesFound = true;
+    
+      expectedCategories.forEach(expectedCategory => {
+        if (!categoryNames.includes(expectedCategory)) {
+          console.error(`Category "${expectedCategory}" not found!`);
+          allCategoriesFound = false;
+        }
+      });
+    
+      if (allCategoriesFound) {
+        console.log('All expected categories were found successfully.');
+      }
+    
+      // Click on each category and verify product cards
+      for (let i = 1; i < categories.length; i++) {
+        const category = categories[i];
+        const categoryName = await category.innerText();
+        await category.click();
+    
+        // Wait for products to load
+        await page.waitForSelector('div#tbodyid div.col-lg-4');
+    
+        // Get all product cards
+        const productCards = await page.$$('div#tbodyid div.col-lg-4');
+        console.log(`${categoryName} Products:`, productCards.length);
+    
+        if (productCards.length > 0) {
+          console.log(`Product cards for category "${categoryName}" loaded successfully.`);
+        } else {
+          console.error(`No product cards found for category "${categoryName}".`);
+        }
+    
+        // Verify each product card
+        for (const productCard of productCards) {
+          const productName = await productCard.$eval('h4', el => el.innerText);
+          const productDescription = await productCard.$eval('p', el => el.innerText);
+          const productPrice = await productCard.$eval('h5', el => el.innerText);
+    
+          console.log(`Product: ${productName}`);
+          console.log(`Description: ${productDescription}`);
+          console.log(`Price: ${productPrice}`);
+    
+          // Add your assertions here (e.g., check for non-empty values, specific formats, etc.)
+          if (!productName || !productDescription || !productPrice) {
+            console.error('Product card validation failed');
+          } else {
+            console.log('Product card validated successfully.');
+          }
+        }
+      }
+    
+      // Close the browser
+      await browser.close();
+    })();
 
-test.describe('Login functionality', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('https://www.demoblaze.com/index.html'); 
-  });
-
-  test('Valid login', async ({ page }) => {
-    await page.click('a#login2'); // Клацніть на посилання "Log in", щоб відкрити модальне вікно
-
-    await page.fill('#loginusername', 'User1'); // Замініть 'User1' на фактичне ім'я користувача
-    await page.fill('#loginpassword', 'Password1'); // Замініть 'Password1' на фактичний пароль
-
-    await page.click('button:has-text("Log in")');
-
-    await expect(page.locator('#nameofuser')).toHaveText('User1'); // Змініть відповідно до фактичного очікуваного результату
-  });
-
-  test('Invalid login', async ({ page }) => {
-    await page.click('a#login2'); 
-
-    await page.fill('#loginusername', 'invaliduser');
-    await page.fill('#loginpassword', 'wrongpassword');
-
-    await page.click('button:has-text("Log in")');
-
-    Додати перевірку очікуваного повідомлення про помилку
-    await expect(page.locator('#errorl')).toHaveText('Invalid username or password'); // Змініть відповідно до фактичного повідомлення про помилку
-  });
-});
 ##Запуск тестів
 Щоб запустити тести, скористайтеся наступною командою:
 
-npx playwright test
+    npx playwright test
 Ця команда запустить всі тести, що знаходяться у вашому проекті.
 
 ##Перегляд результатів тестів
